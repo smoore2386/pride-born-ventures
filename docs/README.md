@@ -15,6 +15,7 @@ All project documentation lives here. Start with [`architecture.md`](./architect
 | [roadmap.md](./roadmap.md) | Phased execution plan (MVP → GA) |
 | [business.md](./business.md) | Business plan: ICP, pricing, unit economics, GTM |
 | [runbook.md](./runbook.md) | On-call / incident response runbook |
+| [test-report.md](./test-report.md) | Latest automated verification run |
 
 ## Conventions
 
