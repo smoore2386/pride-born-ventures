@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../lib/hooks/useAuth";
 
 // ─── Theme ───
 const C = {
@@ -843,11 +845,19 @@ const AdsView = () => (
 
 // ─── Main App ───
 export default function App() {
+  const router = useRouter();
+  const { user, userDoc, loading } = useAuth();
   const [view, setView] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("https://api.prideborn.io/webhook/audiencelab");
   const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) { router.replace("/login?next=/dashboard"); return; }
+    if (user && userDoc && !userDoc.defaultOrgId) { router.replace("/onboarding"); }
+  }, [loading, user, userDoc, router]);
 
   const views = {
     dashboard: <DashboardView connected={connected} />,

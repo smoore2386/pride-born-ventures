@@ -1,0 +1,153 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── helpers ────────────────────────────────────────────
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function membership(orgId) {
+      return get(/databases/$(database)/documents/orgs/$(orgId)/memberships/$(request.auth.uid)).data;
+    }
+
+    function isMember(orgId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/orgs/$(orgId)/memberships/$(request.auth.uid)) &&
+        membership(orgId).status == 'active';
+    }
+
+    function hasRole(orgId, roles) {
+      return isMember(orgId) && (membership(orgId).role in roles);
+    }
+
+    function isOwner(orgId) {
+      return hasRole(orgId, ['owner']);
+    }
+
+    function isAdmin(orgId) {
+      return hasRole(orgId, ['owner', 'admin']);
+    }
+
+    // Fields that are server-only — clients may never write them
+    function mutatesProtectedOrgFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['plan', 'leadCreditsTotal', 'leadCreditsUsed', 'leadCreditsResetAt',
+                 'stripeCustomerId', 'stripeSubscriptionId', 'audienceLabKeyRef']);
+    }
+
+    // ─── users (profile) ────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isSelf(userId);
+      allow create: if isSelf(userId);
+      allow update: if isSelf(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['createdAt', 'email']);
+      allow delete: if false; // account deletion via Admin SDK only
+    }
+
+    // ─── orgs ───────────────────────────────────────────────
+    match /orgs/{orgId} {
+      allow read: if isMember(orgId);
+      allow create: if signedIn();           // bootstrapped via API; see app/api/orgs
+      allow update: if isAdmin(orgId) && !mutatesProtectedOrgFields();
+      allow delete: if false;                // soft-delete via Admin SDK
+
+      match /memberships/{userId} {
+        allow read: if isMember(orgId);
+        allow write: if isOwner(orgId);      // role changes owner-only
+      }
+
+      match /invitations/{inviteId} {
+        allow read: if isMember(orgId);
+        allow create, delete: if isAdmin(orgId);
+        allow update: if false;              // invites are append-only; re-issue to change
+      }
+
+      match /audiences/{audienceId} {
+        allow read: if isMember(orgId);
+        allow create, update: if isAdmin(orgId);
+        allow delete: if isAdmin(orgId);
+      }
+
+      match /leads/{leadId} {
+        allow read: if isMember(orgId);
+        allow update: if isMember(orgId) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'tags', 'notes', 'assignedTo', 'updatedAt']);
+        allow create, delete: if false;      // writes via Admin SDK only
+      }
+
+      match /visitors/{visitorId} {
+        allow read: if isMember(orgId);
+        allow write: if false;               // pixel webhook writes via Admin SDK
+      }
+
+      match /campaigns/{campaignId} {
+        allow read: if isMember(orgId);
+        allow create, update: if isAdmin(orgId);
+        allow delete: if isAdmin(orgId);
+
+        match /sends/{sendId} {
+          allow read: if isMember(orgId);
+          allow write: if false;             // send fan-out via Cloud Function
+        }
+      }
+
+      match /deals/{dealId} {
+        allow read: if isMember(orgId);
+        allow create, update: if isMember(orgId) &&
+          request.resource.data.keys().hasAll(['leadId', 'stage', 'updatedAt']) &&
+          request.resource.data.stage in ['new','contacted','qualified','closed_won','closed_lost'];
+        allow delete: if isAdmin(orgId);
+      }
+
+      match /activities/{activityId} {
+        allow read: if isMember(orgId);
+        allow create: if isMember(orgId);
+        allow update, delete: if false;      // activities are append-only
+      }
+
+      match /adSyncs/{syncId} {
+        allow read: if isMember(orgId);
+        allow write: if false;               // ad sync via API route
+      }
+
+      match /exports/{exportId} {
+        allow read: if isMember(orgId);
+        allow write: if false;               // export via API route
+      }
+
+      match /webhooks/{webhookId} {
+        allow read: if isAdmin(orgId);
+        allow write: if false;               // logs written by system only
+      }
+
+      match /usage/{period} {
+        allow read: if isMember(orgId);
+        allow write: if false;               // usage counters via Cloud Function only
+      }
+
+      match /subscriptions/{subId} {
+        allow read: if isAdmin(orgId);
+        allow write: if false;               // Stripe Extension-owned
+      }
+    }
+
+    // ─── public DNC cache (read-only to clients) ────────────
+    match /dncRegistry/{phoneHash} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

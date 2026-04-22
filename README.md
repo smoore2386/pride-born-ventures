@@ -2,72 +2,97 @@
 
 All-in-one lead intelligence, outreach, and CRM platform for local service businesses. Build audiences, identify website visitors, run email + SMS campaigns, and close deals — powered by the AudienceLab consumer data graph.
 
+- **Production:** <https://pride-born-ventures.vercel.app>
+- **Repo:** <https://github.com/smoore2386/pride-born-ventures>
+
 ## Stack
 
-- **Framework**: Next.js 16 (App Router, React 19)
-- **Styling**: Inline style system, dark-first theme
-- **Data partner**: [AudienceLab](https://audiencelab.io) V3 API + SuperPixel
-- **Deploy target**: Vercel
+- **Framework:** Next.js 16 (App Router, React 19, Turbopack)
+- **Backend:** Firebase — Auth, Firestore, Cloud Functions, Storage. Emulator-first for local dev.
+- **Styling:** inline-style dark theme, Satoshi + IBM Plex Mono
+- **Data partner:** [AudienceLab](https://audiencelab.io) V3 API + SuperPixel
+- **Deploy target:** Vercel
 
-## Getting started
+## Quick start
 
 ```bash
 npm install
 cp .env.example .env.local
-# fill in AUDIENCELAB_API_KEY when you have it
-npm run dev
+npm run dev:all
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for the marketing site. The interactive platform is at [http://localhost:3000/dashboard](http://localhost:3000/dashboard).
+- App: <http://localhost:3000>
+- Emulator UI: <http://localhost:4000>
+- Dashboard: <http://localhost:3000/dashboard>
+
+Firebase emulator handles everything locally — no real credentials needed. See [docs/development.md](./docs/development.md) for details.
+
+## Documentation
+
+All project documentation lives in [`/docs`](./docs).
+
+| Doc | What's in it |
+| --- | --- |
+| [architecture.md](./docs/architecture.md) | System diagram, tech boundary, request flow, directory layout |
+| [data-model.md](./docs/data-model.md) | Firestore collections, fields, indexes, lifecycle |
+| [security.md](./docs/security.md) | Auth + session, rules, PII, compliance posture |
+| [development.md](./docs/development.md) | Local dev with the emulator, scripts, workflows |
+| [api.md](./docs/api.md) | HTTP API reference |
+| [deployment.md](./docs/deployment.md) | Vercel + Firebase deployment runbook, env matrix |
+| [roadmap.md](./docs/roadmap.md) | Phased execution (MVP → GA) |
+| [business.md](./docs/business.md) | ICP, pricing, unit economics, GTM |
+| [runbook.md](./docs/runbook.md) | On-call / incident response |
 
 ## Routes
 
+### Public
 | Path | Purpose |
 | --- | --- |
-| `/` | Marketing landing page (hero, features, flow, FAQ, CTA) |
-| `/features` | Full capability breakdown across product surface |
-| `/industries` | Vertical-specific playbooks (home services, PI, med spa, insurance, agency) |
-| `/pricing` | Three-tier pricing, comparison table, add-ons |
+| `/` | Marketing landing |
+| `/features` | Capability breakdown |
+| `/industries` | Vertical playbooks |
+| `/pricing` | Tiers + comparison |
 | `/about` | Mission + values |
-| `/dashboard` | Interactive platform MVP — 8 views |
-| `/api/audiencelab/test` | `POST` — test AudienceLab API key / connectivity |
-| `/api/audiencelab/audiences` | `GET` — proxy for AudienceLab list audiences |
-| `/api/webhook/audiencelab` | `POST` — inbound webhook for AudienceLab / AudienceSync payloads |
+| `/login`, `/signup` | Auth |
+| `/onboarding` | First-org creation (authed) |
 
-## Dashboard views
+### Authenticated (dashboard — 8 views)
+1. Dashboard KPIs
+2. Audience Builder
+3. Lead Data
+4. Visitor Tracking
+5. Campaigns (Email + SMS)
+6. CRM Pipeline
+7. Ad Integration
+8. Settings
 
-1. **Dashboard** — KPIs, lead acquisition chart, industry mix, recent leads, pipeline status
-2. **Audience Builder** — industry selection, filter stacks, live size estimate
-3. **Lead Data** — tabular records with bulk actions, CSV export
-4. **Visitor Tracking** — SuperPixel install, live visitor feed with match status
-5. **Campaigns** — email + SMS composer with audience selection and delivery stats
-6. **CRM Pipeline** — Kanban across New → Contacted → Closed Won
-7. **Ad Integration** — Meta + Google Customer Match sync with SHA256 hash preview
-8. **Settings** — API key, field mapping, webhooks, pixel snippet
+### API (Node runtime)
+| Path | Method | Purpose |
+| --- | --- | --- |
+| `/api/auth/session` | POST, DELETE | Session cookie issuance / logout |
+| `/api/orgs` | GET, POST | List + create orgs |
+| `/api/health` | GET | Uptime probe (hits Firestore) |
+| `/api/audiencelab/test` | POST | Validate AudienceLab key |
+| `/api/audiencelab/audiences` | GET | List audiences |
+| `/api/webhook/audiencelab` | POST | Inbound AudienceLab webhook |
 
-## Environment variables
+See [docs/api.md](./docs/api.md) for the full reference, including roadmap routes.
 
-| Var | Purpose |
-| --- | --- |
-| `AUDIENCELAB_API_KEY` | Write-permission key from `app.audiencelab.io/account` → API Keys |
-| `AUDIENCELAB_API_URL` | Defaults to `https://app.audiencelab.io/api/v3` |
-| `AUDIENCELAB_WEBHOOK_SECRET` | Shared secret for inbound webhook authorization |
-| `NEXT_PUBLIC_SITE_URL` | Canonical site URL used in metadata, sitemap, and pixel domain defaults |
+## Scripts
 
-## Deploying
-
-```bash
-npm run build         # local production build
-vercel                # preview deploy
-vercel --prod         # production deploy
+```
+npm run dev                 # Next.js only
+npm run dev:emulators       # Firebase emulators
+npm run dev:all             # both concurrently
+npm run build               # production Next.js build
+npm run start               # production Next.js server
+npm run lint                # ESLint
+npm run emulators:export    # snapshot current emulator state to ./emulator-data
+npm run emulators:import    # boot emulators from saved state
+npm run functions:deploy    # firebase deploy --only functions
+npm run rules:deploy        # firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
-Set the same env vars in the Vercel project settings (Production + Preview) before going live.
+## License
 
-## Roadmap
-
-- Authentication (Clerk or Descope via Vercel Marketplace)
-- Postgres-backed lead + campaign persistence (Neon)
-- Transactional email + SMS providers (Postmark, Twilio)
-- AudienceSync CDP destination webhook handling
-- Team seats, SSO, audit logs (Scale plan)
+Proprietary. All rights reserved.

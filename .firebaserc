@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "pride-born-dev",
+    "staging": "pride-born-staging",
+    "production": "pride-born-prod"
+  }
+}

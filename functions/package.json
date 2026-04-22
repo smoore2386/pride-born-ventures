@@ -1,0 +1,20 @@
+{
+  "name": "pride-born-functions",
+  "description": "Cloud Functions for Pride Born Ventures",
+  "private": true,
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.1",
+    "firebase-functions": "^6.1.1"
+  }
+}

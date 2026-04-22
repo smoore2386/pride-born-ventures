@@ -26,6 +26,18 @@ npm-debug.log*
 # Vercel
 .vercel
 
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+storage-debug.log
+emulator-data/
+functions/node_modules/
+functions/lib/
+
 # Misc
 *.tsbuildinfo
 next-env.d.ts

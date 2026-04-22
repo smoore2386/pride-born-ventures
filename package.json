@@ -4,17 +4,28 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:emulators": "firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
+    "dev:all": "concurrently -n next,firebase -c blue,yellow \"npm run dev\" \"npm run dev:emulators\"",
+    "emulators:export": "firebase emulators:export ./emulator-data",
+    "emulators:import": "firebase emulators:start --import=./emulator-data",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "functions:deploy": "firebase deploy --only functions",
+    "rules:deploy": "firebase deploy --only firestore:rules,firestore:indexes,storage"
   },
   "dependencies": {
+    "firebase": "^11.0.2",
+    "firebase-admin": "^13.0.1",
     "next": "^16.0.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "concurrently": "^9.1.0",
     "eslint": "^9.18.0",
-    "eslint-config-next": "^16.0.0"
+    "eslint-config-next": "^16.0.0",
+    "firebase-tools": "^13.29.1"
   }
 }

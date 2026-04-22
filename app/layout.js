@@ -1,4 +1,5 @@
 import "./globals.css";
+import AuthProvider from "./providers/AuthProvider";
 
 export const metadata = {
   title: "Pride Born Ventures — Find leads. Contact them. Close deals.",
@@ -55,7 +56,9 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

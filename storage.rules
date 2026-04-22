@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(orgId) {
+      return signedIn() &&
+        firestore.exists(/databases/(default)/documents/orgs/$(orgId)/memberships/$(request.auth.uid));
+    }
+
+    // Per-org exports (CSV). Clients read via signed URL returned from API.
+    match /exports/{orgId}/{fileName} {
+      allow read: if isMember(orgId);
+      allow write: if false; // Admin SDK only
+    }
+
+    // Email templates per org
+    match /templates/{orgId}/{fileName} {
+      allow read: if isMember(orgId);
+      allow write: if isMember(orgId);
+    }
+
+    // Avatars
+    match /avatars/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
