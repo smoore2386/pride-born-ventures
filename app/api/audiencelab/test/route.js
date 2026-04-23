@@ -34,17 +34,37 @@ export async function POST(req) {
       );
     }
 
-    const data = await res.json().catch(() => ({}));
-    const count = Array.isArray(data)
-      ? data.length
+    const data = await res.json().catch(() => null);
+
+    // Shape check: AudienceLab returns either a JSON array or an object with
+    // an `audiences` array. If the response doesn't match either shape, treat
+    // it as failure — even a 200 response can be the login HTML or an error
+    // envelope when the key is invalid.
+    const listed = Array.isArray(data)
+      ? data
       : Array.isArray(data?.audiences)
-        ? data.audiences.length
-        : null;
+        ? data.audiences
+        : Array.isArray(data?.data)
+          ? data.data
+          : null;
+
+    if (!listed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            data?.error ||
+            data?.message ||
+            "AudienceLab returned an unrecognized response. Double-check the API key has 'write' scope and try again.",
+        },
+        { status: 401 }
+      );
+    }
 
     return NextResponse.json({
       ok: true,
-      audiencesFound: count,
-      msg: count != null ? `Connected to AudienceLab — ${count} audiences found` : "Connected to AudienceLab",
+      audiencesFound: listed.length,
+      msg: `Connected to AudienceLab — ${listed.length} audience${listed.length === 1 ? "" : "s"} found`,
     });
   } catch (err) {
     return NextResponse.json(
