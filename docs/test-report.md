@@ -104,18 +104,31 @@ Script: [`scripts/test-rules.mjs`](../scripts/test-rules.mjs) — uses `@firebas
 
 **22 / 22 rules checks passed.**
 
-## 7. What I could NOT automate
+## 7. Browser verification (run 2026-04-22, via Chrome)
 
-These require a real browser (I don't have browser-control tools loaded). Recommended manual verification — should take ~5 minutes:
+Test user created during this run: `qa-test-apr22@prideborn.test` (throwaway, lives in emulator auth store).
 
-1. **Login page form submission** — open <http://localhost:3000/login>, submit with a seeded emulator user, confirm redirect to `/dashboard`.
-2. **Signup page + onboarding** — `/signup` → `/onboarding` → enter workspace name → confirm dashboard loads with the correct org.
-3. **Google OAuth popup** — not available in emulator (no real Google IdP); will be verified post-production-creds.
-4. **Dashboard view switching** — click through all 8 sidebar items, confirm no JS errors in the console.
-5. **Dashboard API-offline banner** — confirm the amber banner shows when AudienceLab isn't connected.
-6. **Settings → API Connection → Test Connection** — clicking "Test Connection" with a bogus key returns a validation error (client-side stub; live flow comes in Phase 2).
-7. **CRM Kanban drag (visual)** — layout renders; actual drag-drop isn't wired to Firestore until Phase 5.
-8. **Marketing pages on mobile** — responsive check (inline styles use flex/grid with min-widths; should reflow but worth eyeballing).
+| # | Check | Result |
+| --- | --- | --- |
+| 1 | **Signup form** (`/signup`): fill name/email/password → submit | ✅ redirected to `/onboarding` |
+| 2 | **Onboarding form**: workspace name "QA Test Workspace" + default "Home Services" industry → submit | ✅ redirected to `/dashboard` (org created, `onOrgCreated` triggered, `users/{uid}.defaultOrgId` populated) |
+| 3 | **Login form** (`/login`): submit with the user from step 1 | ✅ session cookie set, redirected to `/dashboard` |
+| 4 | **Login error path**: submit with wrong password | ✅ red error box shows `Firebase: Error (auth/wrong-password).`, stays on `/login` |
+| 5 | **Auth gate**: GET `/dashboard` after `DELETE /api/auth/session` | ✅ redirected to `/login?next=/dashboard` |
+| 6 | **8 dashboard views** — click each sidebar item | ✅ all render (Dashboard, Audience Builder, Lead Data, Visitor Tracking, Campaigns, CRM Pipeline, Ad Integration, Settings) |
+| 7 | **Console sweep** across signup + onboarding + login + all 8 views + Settings interactions | ✅ **zero errors, zero warnings** |
+| 8 | **Dashboard API-offline banner**: amber "API not connected" banner + top-right "API Offline" pill | ✅ both visible on default state |
+| 9 | **Settings → Test Connection (empty key)** | ✅ shows `✗ Invalid API key. Get yours at app.audiencelab.io/account → API Keys` |
+| 10 | **Settings → Test Connection (bogus key)** — expected: validation error per plan above | ⚠️ **Bug** — returns `✓ Connected to AudienceLab V3 — 14 audiences found` and flips the top-right pill to "API Live". Stub only guards empty input; any non-empty string passes. Tracked below. |
+| 11 | **CRM Kanban visual** | ✅ 3 columns render (New Leads 4 / Contacted 3 / Closed Won 1), lead cards populated |
+| 12 | **Google OAuth popup** | ⏭ skipped this pass (no real Google IdP; re-verify post-production-creds) |
+| 13 | **Marketing pages on mobile** | ⚠️ not verified — the Chrome extension's `resize_window` only changes the window frame, not the rendering viewport (`innerWidth` stayed 1745 regardless). Code-level review: marketing pages use `repeat(auto-fit, minmax(180/220/260px, 1fr))` + `flexWrap: wrap` (should reflow cleanly); dashboard tables use fixed `fr`-column grids and will horizontal-scroll on mobile. Please eyeball in Chrome DevTools device mode. |
+
+### Bugs found this pass
+
+- **B1: Literal unicode escapes appear in rendered UI.** Several strings contain `\u2014`, `\u2192`, `\u00B7` as literal text instead of their actual characters (em-dash, right-arrow, middle-dot). Visible in at least: `AudienceBuilder` → "Pull Leads \u2192", "SKIPTRACE_MATCH_BY \u2014 higher accuracy…"; `LeadsView` subtitle "AudienceLab records \u2014 verified contacts…"; `VisitorView` subtitle "AudienceLab V3 SuperPixel \u2014 identify anonymous…"; CRM Kanban card "Austin, TX \u00B7 $85K-$100K"; `AdsView` "PI Leads \u2014 Central TX", "Med Spa \u2014 Women 25-45"; Settings helper "app.audiencelab.io/account \u2192 API Keys"; Dashboard banner "Go to Settings \u2192 API Connection". Contrast: the Test Connection error message does render `→` correctly, so this is an encoding issue in the source strings, not runtime. Likely a sed/ASCII-escaping pass that wasn't decoded. Fix: replace the literal `\uXXXX` text with the actual characters in `app/dashboard/page.jsx`.
+- **B2: Test Connection stub accepts any non-empty API key.** See row 10 above. The client-side stub flips `connected = true` on any non-empty input — doesn't match the test-report expectation of "returns a validation error with a bogus key". Either update the expectation (this is intended stub behavior until Phase 2 hooks up real validation) or add a length / prefix check. Worth deciding now so the happy-path demo doesn't train the wrong mental model.
+- **B3 (minor): Login ignores `?next=` query param.** `/login/page.jsx:39` hardcodes `router.push("/dashboard")` after a successful sign-in. The auth gate populates `?next=<path>` but login doesn't read it back. Fine while every protected route is `/dashboard`, but will bite when the first non-dashboard gated page ships.
 
 ## 8. Known warnings / follow-ups
 

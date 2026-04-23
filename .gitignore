@@ -38,6 +38,11 @@ emulator-data/
 functions/node_modules/
 functions/lib/
 
+# Firebase service account JSON — NEVER commit
+*firebase-adminsdk*.json
+serviceAccount*.json
+pride-born-firebase-*.json
+
 # Misc
 *.tsbuildinfo
 next-env.d.ts
