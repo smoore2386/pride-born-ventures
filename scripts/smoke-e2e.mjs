@@ -2,7 +2,7 @@
 // Simulates: create user -> sign in -> create session cookie -> create org
 // -> verify Cloud Function triggers seeded user/org docs + membership + usage.
 
-const PROJECT = "pride-born-dev";
+const PROJECT = process.env.SMOKE_PROJECT || "pride-born";
 const AUTH_EMU = "http://127.0.0.1:9099";
 const FS_EMU = "http://127.0.0.1:8080";
 const NEXT = "http://localhost:3000";
@@ -101,13 +101,13 @@ async function run() {
   const { idToken, localId } = await signUp();
   console.log(`   uid=${localId}`);
 
-  console.log("\n[2] Waiting for onUserCreate trigger to seed users/{uid}");
-  const userDoc = await waitFor("users/{uid}", async () => fsGet(`users/${localId}`));
-  console.log("   users doc:", fields(userDoc));
-
-  console.log("\n[3] POST /api/auth/session with idToken");
+  console.log("\n[2] POST /api/auth/session with idToken (also seeds users/{uid})");
   const cookie = await createSessionCookie(idToken);
   console.log(`   got cookie: ${cookie.slice(0, 40)}...`);
+
+  console.log("\n[2b] Verifying /api/auth/session created users/{uid}");
+  const userDoc = await waitFor("users/{uid}", async () => fsGet(`users/${localId}`));
+  console.log("   users doc:", fields(userDoc));
 
   console.log("\n[4] GET /api/orgs (expect empty list)");
   const before = await listOrgs(cookie);

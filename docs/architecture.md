@@ -50,6 +50,8 @@ Pride Born Ventures is a Next.js 16 App Router app deployed on Vercel with Fireb
 - Scheduled jobs: `scheduledUsageRollup` (daily), `scheduledCampaignSender` (every 5 minutes).
 - Stripe Extension hooks (Phase 3).
 
+> **MVP note** — Cloud Functions require the Blaze plan. Until the project is upgraded, the same seeding work is inlined idempotently into the Next.js API routes (`/api/auth/session` seeds `users/{uid}`; `/api/orgs` seeds `memberships/`, `usage/`, and lead credits). When Blaze is enabled and functions are deployed, the triggers will also run — both paths use `set(..., { merge: true })` so double-writes are safe.
+
 **Firestore client SDK (in the browser)** owns:
 - Authenticated org-scoped reads via `onSnapshot` listeners (leads list, deals Kanban, campaign list, visitor feed).
 - Small, rules-validated mutations (dragging a deal across stages updates `deals/{id}.stage` directly; server-side validation would add latency without meaningful safety because the rules already constrain stage + role + org).

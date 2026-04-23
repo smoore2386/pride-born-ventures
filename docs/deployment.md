@@ -52,28 +52,33 @@ For each project:
 
 From your local checkout:
 ```bash
-firebase use staging
-firebase deploy --only firestore:rules,firestore:indexes,storage
-
 firebase use production
-firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only firestore:rules,firestore:indexes
 ```
 
-### 5. Cloud Functions
+Storage and Cloud Functions both require the **Blaze (pay-as-you-go) plan**. Until the project is on Blaze, skip those deploy targets — the API routes inline the trigger work as a fallback (`/api/auth/session` seeds `users/{uid}`, `/api/orgs` seeds `memberships/`, `usage/`, lead credits). No code changes are needed to switch over later; re-deploying functions is additive and idempotent because both paths use `set(..., { merge: true })`.
+
+### 5. Cloud Functions (optional — requires Blaze)
 
 ```bash
 cd functions
 npm install
 cd ..
 
-firebase use staging
-firebase deploy --only functions
-
 firebase use production
 firebase deploy --only functions
 ```
 
 Functions are Node 22, ESM (`"type": "module"` in [`functions/package.json`](../functions/package.json)).
+
+### 5b. Storage (optional — requires Blaze)
+
+Needed once CSV exports ship in Phase 2:
+
+```bash
+firebase use production
+firebase deploy --only storage
+```
 
 ### 6. Vercel env vars
 
